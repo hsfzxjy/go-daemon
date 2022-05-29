@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
@@ -61,7 +62,7 @@ func Example() {
 		}
 	}()
 
-	err = ServeSignals()
+	err = ServeSignals(context.TODO())
 	if err != nil {
 		log.Println("Error:", err)
 	}

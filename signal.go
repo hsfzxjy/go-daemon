@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/signal"
@@ -23,7 +24,7 @@ func SetSigHandler(handler SignalHandlerFunc, signals ...os.Signal) {
 }
 
 // ServeSignals calls handlers for system signals.
-func ServeSignals() (err error) {
+func ServeSignals(ctx context.Context) (err error) {
 	signals := make([]os.Signal, 0, len(handlers))
 	for sig := range handlers {
 		signals = append(signals, sig)
@@ -32,10 +33,19 @@ func ServeSignals() (err error) {
 	ch := make(chan os.Signal, 8)
 	signal.Notify(ch, signals...)
 
-	for sig := range ch {
-		err = handlers[sig](sig)
-		if err != nil {
-			break
+LOOP:
+	for {
+		select {
+		case sig, ok := <-ch:
+			if !ok {
+				break LOOP
+			}
+			err = handlers[sig](sig)
+			if err != nil {
+				break LOOP
+			}
+		case <-ctx.Done():
+			break LOOP
 		}
 	}
 
